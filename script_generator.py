@@ -1,7 +1,7 @@
-import os
-import google.generativeai as genai
 from dataclasses import dataclass
 from typing import List
+import google.generativeai as genai
+import os
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -22,32 +22,24 @@ class Script:
     call_to_action: str
     content: str
 
-    def export(self, filename: str):
-        with open(filename, 'w') as f:
-            f.write(self.content)
-
 class ScriptGenerator:
     def __init__(self):
         self.templates = {
-            "educational": {"hook": "Did you know that {topic} can change your life?"},
-            "promotional": {"hook": "Tired of {topic}? Discover the solution!"},
-            "storytelling": {"hook": "Let me tell you an amazing story about {topic}"},
+            "educational": "Generate an {length} educational video script in {language} on topic '{topic}'. Include hook, scenes, and CTA. Use simple, engaging language.",
+            "promotional": "Create a {length} promotional video script in {language} for '{topic}'. Highlight problem, solution, benefits, and CTA.",
+            "storytelling": "Tell a {length} story in {language} about '{topic}'. Include setup, conflict, resolution, and moral takeaway."
         }
 
-    def generate_script(self, topic: str, video_type: str, length: str, language: str) -> Script:
+    def generate_script(self, topic: str, video_type: str, length: str, language: str = "en") -> Script:
         model = genai.GenerativeModel("gemini-1.5-flash")
-        prompt = f"""
-        Generate a detailed {video_type} video script in **{language}** on the topic: {topic}.
-        Make it {length} in length. Include a hook, structured scenes, and a clear call-to-action.
-        The entire response should be in **{language}** and easy to understand.
-        """
+        prompt = self.templates[video_type].format(topic=topic, length=length, language=language)
         response = model.generate_content(prompt)
-        script_text = response.text
+        content = response.text
 
         return Script(
-            title=f"Video about {topic}",
-            hook=self.templates[video_type]["hook"].format(topic=topic),
+            title=f"{topic.title()} Video",
+            hook="",
             scenes=[],
-            call_to_action="Like and subscribe for more content!",
-            content=script_text
+            call_to_action="Like and subscribe for more!",
+            content=content
         )
