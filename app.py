@@ -1,58 +1,54 @@
 import streamlit as st
 from script_generator import ScriptGenerator
 from tts_engine import TTSEngine
-from production_planner import ProductionPlanner
-from utils import get_sound_effects_list, generate_storyboard
-import json
+from utils import generate_storyboard, get_sound_effects_list
 
-script_gen = ScriptGenerator()
-tts = TTSEngine()
-planner = ProductionPlanner()
+# Title
+st.title("🎬 Video Script Generator & TTS System")
 
-st.set_page_config(page_title="Video Script Generator", layout="wide")
-st.title("Video Script Generator & TTS System")
+# Inputs
+topic = st.text_input("Enter your topic", "solar energy")
+video_type = st.selectbox("Select video type", ["educational", "promotional", "storytelling"])
+length = st.selectbox("Script length", ["short", "long"])
+language = st.selectbox("Language", ["en", "hi", "fr", "es", "de"])
+voice_id = st.text_input("Edge TTS Voice ID (optional)", "")
 
-with st.sidebar:
-    st.header("Configuration")
-    topic = st.text_input("Enter your topic")
-    video_type = st.selectbox("Select video type", ["educational", "promotional", "storytelling"])
-    length = st.select_slider("Script length", options=["short", "medium", "long"])
-    language = st.selectbox("Language", ["en", "es", "fr", "de"])
-    voice_id = st.text_input("ElevenLabs Voice ID (optional)", value="EXAVITQu4vr4xnSDxMaL")
+# Voice fallback map
+voice_map = {
+    "en": "en-US-JennyNeural",
+    "hi": "hi-IN-SwaraNeural",
+    "fr": "fr-FR-DeniseNeural",
+    "es": "es-ES-ElviraNeural",
+    "de": "de-DE-KatjaNeural"
+}
 
-if st.button("Generate Script & Audio") and topic:
-    with st.spinner("Generating script..."):
-        script = script_gen.generate_script(topic, video_type, length, language)
+if st.button("🎙️ Generate Script & Audio"):
+    # Script
+    generator = ScriptGenerator()
+    script = generator.generate_script(topic, video_type, length, language=language)
 
-        st.header("Generated Script")
-        st.subheader(script.title)
-        st.write("Hook:", script.hook)
-        st.write("Content:", script.content)
-        st.write("Call to Action:", script.call_to_action)
+    st.subheader("🎥 Generated Script")
+    st.text_area("Script", script.content, height=400)
 
-        with st.spinner("Generating audio..."):
-            audio_file = tts.generate_speech(script.content, language=language, voice_id=voice_id)
-            st.audio(audio_file)
+    # Storyboard
+    sb_path = generate_storyboard(script.content)
+    st.success(f"📑 Storyboard saved at: {sb_path}")
 
-        with st.spinner("Creating production plan..."):
-            production_plan = planner.create_plan(script, audio_file)
-            st.header("Production Plan")
-            st.json(production_plan.scenes)
+    # TTS
+    tts = TTSEngine()
+    selected_voice = voice_id or voice_map.get(language, "en-US-JennyNeural")
+    st.write("Generating TTS audio...")
+    audio_file = tts.generate_speech(script.content, language=language, voice_id=selected_voice)
+    st.audio(audio_file)
 
-        st.download_button("Download Script", script.content, "script.txt", "text/plain")
-        with open(audio_file, 'rb') as f:
-            st.download_button("Download Audio", f, "audio.mp3", "audio/mp3")
-        st.download_button("Download Plan", json.dumps(production_plan.scenes, indent=2), "plan.json")
+    # Downloads
+    with open(audio_file, "rb") as f:
+        st.download_button("⬇️ Download Audio", f, file_name="output.mp3")
+    with open(sb_path, "r") as f:
+        st.download_button("⬇️ Download Storyboard", f, file_name="storyboard.txt")
+    st.download_button("⬇️ Download Script", script.content, file_name="script.txt")
 
-        with st.spinner("Generating Storyboard..."):
-            sb_path = generate_storyboard(script.content)
-            with open(sb_path, "r") as f:
-                st.download_button("Download Storyboard", f, "storyboard.txt", "text/plain")
-
-        st.header("Add Sound Effects (Optional)")
-        effects = get_sound_effects_list()
-        selected_effect = st.selectbox("Choose a sound effect", effects)
-        if selected_effect:
-            st.audio(f"sounds/{selected_effect}")
-else:
-    st.info("Enter a topic and click 'Generate Script & Audio'")
+    # SFX
+    st.subheader("🎵 Suggested Sound Effects")
+    for sfx in get_sound_effects_list():
+        st.markdown(f"- {sfx}")
