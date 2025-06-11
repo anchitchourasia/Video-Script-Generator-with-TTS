@@ -3,3 +3,5 @@ python-dotenv
 requests
 google-generativeai
 edge-tts
+pandas
+Pillow
